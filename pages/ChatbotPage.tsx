@@ -13,16 +13,15 @@ const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, ch
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    // Fetches sequence data directly from the authoritative RCSB PDB API
-    const url = `https://www.rcsb.org/fasta/entry/${pdbId.toUpperCase()}/chain/${chain}`;
+    // Fetches sequence data directly from the authoritative RCSB PDB API.
+    // Crucially, converts chain to uppercase as the API requires it.
+    const url = `https://www.rcsb.org/fasta/entry/${pdbId.toUpperCase()}/chain/${chain.toUpperCase()}`;
     
     fetch(url)
       .then(async (res) => {
         const text = await res.text();
-        if (!res.ok) {
-          const errorMsg = text.includes('Nothing found') 
-            ? `Error: Could not find PDB ID '${pdbId}' with chain '${chain}'. Please check the identifiers.`
-            : `Failed to fetch sequence. Server responded with status: ${res.status}.`;
+        if (!res.ok || text.includes('Nothing found')) {
+          const errorMsg = `Error: Could not find PDB ID '${pdbId.toUpperCase()}' with chain '${chain.toUpperCase()}'. Please check the identifiers.`;
           throw new Error(errorMsg);
         }
         setContent(text);
