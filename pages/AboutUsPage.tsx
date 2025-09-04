@@ -18,14 +18,6 @@ const AboutUsPage: React.FC = () => {
         <p className="text-lg text-center text-gray-300 mb-12">
           We are a dedicated team of researchers and developers passionate about leveraging computational tools to push the boundaries of bioinformatics and protein engineering.
         </p>
-        
-        {/* Our Mission Section */}
-        <div className="mb-12">
-          <h2 className="text-3xl font-semibold text-center mb-8 border-b-2 border-cyan-500 pb-2">Our Mission</h2>
-          <p className="text-center text-lg text-gray-300">
-            Our mission is to create innovative software and research tools that accelerate scientific discovery. We believe in open-source collaboration and in fostering the next generation of computational scientists.
-          </p>
-        </div>
 
         {/* Supervisors Section */}
         <div className="mb-12">
@@ -52,14 +44,19 @@ const AboutUsPage: React.FC = () => {
         </div>
         
         {/* Developers Section */}
-        <div>
+        <div className="mb-12">
           <h2 className="text-3xl font-semibold text-center mb-8 border-b-2 border-cyan-500 pb-2">Developers</h2>
+          <p className="text-center text-lg text-gray-300">
+            Our mission is to create innovative software and research tools that accelerate scientific discovery. We believe in open-source collaboration and in fostering the next generation of computational scientists.
+          </p>
+        </div>
+        <div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <ProfileCard 
-              name="Jian Li" 
-              title="Ph.D. Candidate" 
+              name="Hariom" 
+              title="Owner" 
               imageUrl="https://i.pravatar.cc/150?img=3" 
-              bio="Jian is passionate about creating intuitive user interfaces for complex bioinformatics tools."
+              bio="Hariom is passionate about creating intuitive user interfaces for complex bioinformatics tools."
               quote="Making science accessible through great design is my goal."
             />
             <ProfileCard 
@@ -72,13 +69,8 @@ const AboutUsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Contact Us Section */}
         <div className="mt-12 text-center">
-            <h2 className="text-2xl font-semibold mb-4">Want to learn more about our work?</h2>
-            <p className="text-gray-400 mb-6">We are always looking for collaborators and passionate researchers.</p>
-            <button className="bg-cyan-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-cyan-600 transition-colors">
-                Get in Touch
-            </button>
+            <p className="text-gray-400 mb-6">Thank You!</p>
         </div>
 
       </div>
