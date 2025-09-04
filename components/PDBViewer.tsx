@@ -41,7 +41,10 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId, style = 'cartoon', interac
               colorscheme: 'electrostatic',
             });
           } else if (style === 'interaction' && interaction) {
-            const { chain1, chain2 } = interaction;
+            // Ensure chain IDs are uppercase as they are case-sensitive. This makes the component more robust.
+            const chain1 = interaction.chain1.toUpperCase();
+            const chain2 = interaction.chain2.toUpperCase();
+            
             const model = viewer.getModel();
 
             viewer.setStyle({}, { cartoon: { color: 'lightgray', opacity: 0.2 } });
