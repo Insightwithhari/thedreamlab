@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ProteinBackground from './components/ProteinBackground';
 import HomePage from './pages/HomePage';
@@ -8,11 +8,37 @@ import AboutUsPage from './pages/AboutUsPage';
 import ContactUsPage from './pages/ContactUsPage';
 import { MenuIcon } from './components/icons';
 
-type Page = 'home' | 'chatbot' | 'supervisor' | 'about' | 'contact';
+export type Page = 'home' | 'chatbot' | 'supervisor' | 'about' | 'contact';
+
+const getPageFromHash = (): Page => {
+    const hash = window.location.hash.substring(1);
+    const validPages: Page[] = ['home', 'chatbot', 'supervisor', 'about', 'contact'];
+    if (validPages.includes(hash as Page)) {
+        return hash as Page;
+    }
+    return 'home';
+};
 
 const App: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState<Page>('home');
+  const [currentPage, setCurrentPage] = useState<Page>(getPageFromHash());
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setCurrentPage(getPageFromHash());
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    
+    // Set initial hash if none exists to ensure a valid starting point
+    if (!window.location.hash) {
+        window.location.hash = '#home';
+    }
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
@@ -37,7 +63,7 @@ const App: React.FC = () => {
       <Sidebar 
         isOpen={isSidebarOpen} 
         onClose={() => setSidebarOpen(false)} 
-        setCurrentPage={setCurrentPage}
+        currentPage={currentPage}
       />
       
       <div className="relative z-10 flex flex-col flex-grow">
