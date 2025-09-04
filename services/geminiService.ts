@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Chat } from "@google/genai";
 import { DR_RHESUS_SYSTEM_INSTRUCTION } from '../constants';
 
@@ -13,6 +12,7 @@ export function createChatSession(): Chat {
     model: 'gemini-2.5-flash',
     config: {
       systemInstruction: DR_RHESUS_SYSTEM_INSTRUCTION,
+      tools: [{ googleSearch: {} }],
     },
   });
   return chat;
