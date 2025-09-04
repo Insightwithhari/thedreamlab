@@ -1,13 +1,15 @@
 import React from 'react';
 
+type Page = 'home' | 'chatbot' | 'supervisor' | 'about' | 'contact';
+
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  setCurrentPage: (page: 'chatbot' | 'supervisor' | 'about') => void;
+  setCurrentPage: (page: Page) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, setCurrentPage }) => {
-  const handleNavigation = (page: 'chatbot' | 'supervisor' | 'about') => {
+  const handleNavigation = (page: Page) => {
     setCurrentPage(page);
     onClose();
   };
@@ -27,6 +29,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, setCurrentPage }) =>
         </div>
         <nav>
           <ul>
+            <li>
+              <button 
+                onClick={() => handleNavigation('home')}
+                className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+              >
+                Home
+              </button>
+            </li>
             <li>
               <button 
                 onClick={() => handleNavigation('chatbot')}
@@ -49,6 +59,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, setCurrentPage }) =>
                 className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
               >
                 About Us
+              </button>
+            </li>
+             <li>
+              <button 
+                onClick={() => handleNavigation('contact')}
+                className="w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+              >
+                Contact Us
               </button>
             </li>
           </ul>
