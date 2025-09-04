@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { Chat } from '@google/genai';
 import { Message, MessageAuthor } from '../types';
@@ -83,7 +84,7 @@ const ChatbotPage: React.FC = () => {
           parts.push(
             <div key={`${command}-${payload}`} className="mt-4 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
                 <h4 className="text-sm font-bold text-gray-300 p-3 bg-gray-700/50">BLAST Search Results</h4>
-                <pre className="whitespace-pre-wrap p-3 font-mono text-xs max-h-60 overflow-y-auto">{payload.trim()}</pre>
+                <pre className="whitespace-pre p-3 font-mono text-xs max-h-96 overflow-auto">{payload.trim()}</pre>
             </div>
           );
           break;
