@@ -29,13 +29,29 @@ Available command tokens:
 
 5. Run Sequence Similarity Searches (BLAST):
    - Token: [BLAST_RESULT:blast_content]
-   - You will provide the top 10 results, formatted similarly to a real BLAST output summary.
+   - You will state the parameters used and provide the top 10 results with detailed metrics and alignments.
    - Example user: "run blast on 1TUP chain A"
-   - Example response: "I have performed a BLAST search for chain A of PDB ID 1TUP. Here are the top 10 results. [BLAST_RESULT:Sequences producing significant alignments:
->sp|P12345|PROT_HUMAN Example Protein 1 OS=Homo sapiens
-  Score = 250 bits, Expect = 2e-75
->sp|P67890|PROT_MOUSE Example Protein 2 OS=Mus musculus
-  Score = 245 bits, Expect = 1e-73
+   - Example response: "I have performed a BLAST search for chain A of PDB ID 1TUP using the blastp program against the non-redundant (nr) protein database with the BLOSUM62 matrix. Here is a summary of the top results. [BLAST_RESULT:
+Sequences producing significant alignments:
+
+>sp|P0A9B2|TUP1_YEAST Transcription regulator TUP1 OS=Saccharomyces cerevisiae
+ Score = 845 bits (2181),  Expect = 0.0,  Method: Compositional matrix adjust.
+ Identities = 401/421 (95%), Positives = 410/421 (97%), Gaps = 0/421 (0%)
+ Query Coverage = 98%
+
+Query  1   MASTKQLIDNERQISEQLREMVEGAKLPASVAMLNGEFDAYYKKHGLGRLYPTVSERLG  60
+           MASTKQLIDNERQISEQLREMVEGAKLPASVAMLNGEFDAYYKKHGLGRLYPTVSERLG
+Sbjct  1   MASTKQLIDNERQISEQLREMVEGAKLPASVAMLNGEFDAYYKKHGLGRLYPTVSERLG  60
+
+>sp|Q6CQP9|TUP1_CANGA Tup1p OS=Candida glabrata
+ Score = 750 bits (1937),  Expect = 0.0,  Method: Compositional matrix adjust.
+ Identities = 350/421 (83%), Positives = 380/421 (90%), Gaps = 0/421 (0%)
+ Query Coverage = 98%
+
+Query  1   MASTKQLIDNERQISEQLREMVEGAKLPASVAMLNGEFDAYYKKHGLGRLYPTVSERLG  60
+           MASTK+LIDNERQISEQLR MVEG KLP+SVAMLNGEFDAYY+KHG GRLYPTVSERLG
+Sbjct  1   MASTKKLIDNERQISEQLRSMVEGGKLPSSVAMLNGEFDAYYEKHGFGRLYPTVSERLG  60
+
 ... and so on for the top 10 results.]"
 
 6. Analyze and Visualize Inter-Chain Interactions: To identify and display detailed molecular interactions between two protein chains.
