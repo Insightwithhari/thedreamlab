@@ -8,86 +8,6 @@ import ChatInput from '../components/ChatInput';
 import { RhesusIcon, DownloadIcon } from '../components/icons';
 import PDBViewer from '../components/PDBViewer';
 
-// Moved component outside ChatbotPage to prevent re-declaration on every render.
-const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, chain }) => {
-  const [content, setContent] = useState<string>('Fetching sequence...');
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    const ucPdbId = pdbId.toUpperCase();
-    const targetChain = chain.trim().toUpperCase();
-    const url = `https://www.rcsb.org/fasta/entry/${ucPdbId}`;
-    
-    fetch(url)
-      .then(res => {
-        if (!res.ok) {
-           throw new Error(`HTTP error! Status: ${res.status}`);
-        }
-        return res.text();
-      })
-      .then(fastaData => {
-        const entries = fastaData.split('>').slice(1); // Split by '>' and remove the first empty element
-        let foundEntry = null;
-
-        for (const entry of entries) {
-            if (!entry.trim()) continue;
-
-            const header = entry.substring(0, entry.indexOf('\n')).trim();
-            const parts = header.split('|');
-
-            // --- Robust Chain Matching Logic ---
-            const allChainIds = new Set<string>();
-
-            // 1. Check primary ID part (e.g., "1TUP:A")
-            const primaryIdPart = parts[0].split(':')[1];
-            if (primaryIdPart) {
-                allChainIds.add(primaryIdPart.trim().toUpperCase());
-            }
-
-            // 2. Check descriptive "Chains" part (e.g., "Chains A, C")
-            const chainsDescPart = parts.find(p => p.trim().toLowerCase().startsWith('chain'));
-            if (chainsDescPart) {
-                let chainListStr = chainsDescPart.trim().toLowerCase();
-                // Remove prefix "chains " or "chain "
-                chainListStr = chainListStr.replace(/^chains?\s*/, '');
-                const chainsInDesc = chainListStr.split(',').map(c => c.trim().toUpperCase());
-                chainsInDesc.forEach(c => allChainIds.add(c));
-            }
-            
-            // 3. Check if the target chain is in our collected set of IDs
-            if (allChainIds.has(targetChain)) {
-                foundEntry = entry;
-                break; // Found it, stop searching
-            }
-        }
-
-
-        if (foundEntry) {
-          const [header, ...sequenceLines] = foundEntry.trim().split('\n');
-          const fastaHeader = `>${header}`;
-          const formattedSequence = sequenceLines.join('').replace(/\s/g, '').match(/.{1,70}/g)?.join('\n');
-          setContent(`${fastaHeader}\n${formattedSequence || ''}`);
-          setHasError(false);
-        } else {
-          throw new Error(`Could not find FASTA data for chain '${targetChain}' in PDB ID '${ucPdbId}'.`);
-        }
-      })
-      .catch(err => {
-        console.error("Sequence fetch error:", err);
-        setContent(`Error: Failed to fetch sequence for PDB ID '${ucPdbId}' chain '${targetChain}'. Please verify the identifiers.`);
-        setHasError(true);
-      });
-  }, [pdbId, chain]);
-
-  const preClasses = `whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4 ${hasError ? 'text-red-300' : 'text-green-300'}`;
-
-  return (
-    <pre className={preClasses}>
-      {content}
-    </pre>
-  );
-};
-
 const ChatbotPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -119,7 +39,7 @@ const ChatbotPage: React.FC = () => {
   const parseResponse = (responseText: string): React.ReactNode => {
     const parts: (string | React.ReactElement)[] = [];
     let lastIndex = 0;
-    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY|INTERACTION_VIEW|FETCH_SEQUENCE|SURFACE_VIEW):([^\]]+)\]/g;
+    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY|INTERACTION_VIEW|SURFACE_VIEW):([^\]]+)\]/g;
     
     let match;
     while ((match = regex.exec(responseText)) !== null) {
@@ -143,13 +63,6 @@ const ChatbotPage: React.FC = () => {
         case 'SURFACE_VIEW':
             parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={payload.trim()} style="surface" />);
             break;
-        case 'FETCH_SEQUENCE': {
-            const [pdbId, chain] = payload.trim().split(':');
-            if (pdbId && chain) {
-                 parts.push(<SequenceFetcher key={`${command}-${payload}`} pdbId={pdbId} chain={chain} />);
-            }
-            break;
-        }
         case 'MUTATION_DOWNLOAD': {
             const filename = payload.trim();
             const pdbId = filename.split('_')[0];
