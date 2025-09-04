@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { Chat } from '@google/genai';
 import { Message, MessageAuthor } from '../types';
 import { createChatSession, sendMessage } from '../services/geminiService';
@@ -7,6 +7,40 @@ import ChatWindow from '../components/ChatWindow';
 import ChatInput from '../components/ChatInput';
 import { RhesusIcon, DownloadIcon } from '../components/icons';
 import PDBViewer from '../components/PDBViewer';
+
+const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, chain }) => {
+  const [content, setContent] = useState<string>('Fetching sequence...');
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    // Fetches sequence data directly from the authoritative RCSB PDB API
+    const url = `https://www.rcsb.org/fasta/entry/${pdbId.toUpperCase()}/chain/${chain}`;
+    
+    fetch(url)
+      .then(async (res) => {
+        const text = await res.text();
+        if (!res.ok) {
+          const errorMsg = text.includes('Nothing found') 
+            ? `Error: Could not find PDB ID '${pdbId}' with chain '${chain}'. Please check the identifiers.`
+            : `Failed to fetch sequence. Server responded with status: ${res.status}.`;
+          throw new Error(errorMsg);
+        }
+        setContent(text);
+      })
+      .catch(err => {
+        setContent(err.message || 'An unknown error occurred while fetching the sequence.');
+        setHasError(true);
+      });
+  }, [pdbId, chain]);
+
+  const preClasses = `whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4 ${hasError ? 'text-red-300' : ''}`;
+
+  return (
+    <pre className={preClasses}>
+      {content}
+    </pre>
+  );
+};
 
 const ChatbotPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -39,7 +73,7 @@ const ChatbotPage: React.FC = () => {
   const parseResponse = (responseText: string): React.ReactNode => {
     const parts: (string | React.ReactElement)[] = [];
     let lastIndex = 0;
-    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY|INTERACTION_VIEW|SEQUENCE_DISPLAY|SURFACE_VIEW):([^\]]+)\]/g;
+    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY|INTERACTION_VIEW|FETCH_SEQUENCE|SURFACE_VIEW):([^\]]+)\]/g;
     
     let match;
     while ((match = regex.exec(responseText)) !== null) {
@@ -63,11 +97,13 @@ const ChatbotPage: React.FC = () => {
         case 'SURFACE_VIEW':
             parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={payload.trim()} style="surface" />);
             break;
-        case 'SEQUENCE_DISPLAY': {
-            const sequenceContent = payload.trim().replace(/\\n/g, '\n');
-            parts.push(<pre key={`${command}-${payload}`} className="whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4">{sequenceContent}</pre>);
+        case 'FETCH_SEQUENCE': {
+            const [pdbId, chain] = payload.trim().split(':');
+            if (pdbId && chain) {
+                 parts.push(<SequenceFetcher key={`${command}-${payload}`} pdbId={pdbId} chain={chain} />);
+            }
             break;
-          }
+        }
         case 'MUTATION_DOWNLOAD': {
             const filename = payload.trim();
             const pdbId = filename.split('_')[0];
