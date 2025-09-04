@@ -15,58 +15,66 @@ const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, ch
 
   useEffect(() => {
     const ucPdbId = pdbId.toUpperCase();
-    const trimmedChain = chain.trim(); 
+    const targetChain = chain.trim().toUpperCase();
     const url = `https://www.rcsb.org/fasta/entry/${ucPdbId}`;
     
     fetch(url)
       .then(res => {
         if (!res.ok) {
-           throw new Error(`HTTP error fetching FASTA! Status: ${res.status}`);
+           throw new Error(`HTTP error! Status: ${res.status}`);
         }
         return res.text();
       })
       .then(fastaData => {
-        const entries = fastaData.split('>').filter(entry => entry.trim() !== '');
-        const chainEntry = entries.find(entry => {
-          const header = entry.substring(0, entry.indexOf('\n')).trim();
-          const parts = header.split('|');
-          const idPart = parts[0]; // e.g., 1YCR:A
-          
-          if (!idPart.startsWith(ucPdbId + ':')) {
-            return false;
-          }
-      
-          // Look for the part that describes the chains, e.g., "Chains A, C"
-          const chainsDescriptionPart = parts.find(p => p.trim().toLowerCase().startsWith('chain'));
-      
-          if (chainsDescriptionPart) {
-            let chainListStr = chainsDescriptionPart.trim().toLowerCase();
-            // Remove "chains " or "chain " prefix
-            chainListStr = chainListStr.startsWith('chains') 
-              ? chainListStr.substring('chains'.length) 
-              : chainListStr.substring('chain'.length);
-            
-            const listedChains = chainListStr.trim().split(',').map(c => c.trim().toUpperCase());
-            return listedChains.includes(trimmedChain.toUpperCase());
-          }
-      
-          // Fallback: if no "Chains" part, check the ID part like "1YCR:A" case-insensitively
-          const primaryChainId = idPart.split(':')[1];
-          return primaryChainId.toUpperCase() === trimmedChain.toUpperCase();
-        });
+        const entries = fastaData.split('>').slice(1); // Split by '>' and remove the first empty element
+        let foundEntry = null;
 
-        if (chainEntry) {
-          const [header, ...sequenceLines] = chainEntry.trim().split('\n');
+        for (const entry of entries) {
+            if (!entry.trim()) continue;
+
+            const header = entry.substring(0, entry.indexOf('\n')).trim();
+            const parts = header.split('|');
+
+            // --- Robust Chain Matching Logic ---
+            const allChainIds = new Set<string>();
+
+            // 1. Check primary ID part (e.g., "1TUP:A")
+            const primaryIdPart = parts[0].split(':')[1];
+            if (primaryIdPart) {
+                allChainIds.add(primaryIdPart.trim().toUpperCase());
+            }
+
+            // 2. Check descriptive "Chains" part (e.g., "Chains A, C")
+            const chainsDescPart = parts.find(p => p.trim().toLowerCase().startsWith('chain'));
+            if (chainsDescPart) {
+                let chainListStr = chainsDescPart.trim().toLowerCase();
+                // Remove prefix "chains " or "chain "
+                chainListStr = chainListStr.replace(/^chains?\s*/, '');
+                const chainsInDesc = chainListStr.split(',').map(c => c.trim().toUpperCase());
+                chainsInDesc.forEach(c => allChainIds.add(c));
+            }
+            
+            // 3. Check if the target chain is in our collected set of IDs
+            if (allChainIds.has(targetChain)) {
+                foundEntry = entry;
+                break; // Found it, stop searching
+            }
+        }
+
+
+        if (foundEntry) {
+          const [header, ...sequenceLines] = foundEntry.trim().split('\n');
           const fastaHeader = `>${header}`;
           const formattedSequence = sequenceLines.join('').replace(/\s/g, '').match(/.{1,70}/g)?.join('\n');
           setContent(`${fastaHeader}\n${formattedSequence || ''}`);
+          setHasError(false);
         } else {
-          throw new Error(`Could not find FASTA entry for chain '${trimmedChain}' in PDB ID '${ucPdbId}'. The entry may not contain this chain or the chain ID is incorrect.`);
+          throw new Error(`Could not find FASTA data for chain '${targetChain}' in PDB ID '${ucPdbId}'.`);
         }
       })
       .catch(err => {
         console.error("Sequence fetch error:", err);
-        setContent(`Error: Failed to fetch sequence for PDB ID '${ucPdbId}' chain '${trimmedChain}'. Please verify the identifiers.`);
+        setContent(`Error: Failed to fetch sequence for PDB ID '${ucPdbId}' chain '${targetChain}'. Please verify the identifiers.`);
         setHasError(true);
       });
   }, [pdbId, chain]);
