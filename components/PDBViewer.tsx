@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 
 declare const $3Dmol: any;
@@ -43,38 +42,31 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId, style = 'cartoon', interac
           } else if (style === 'interaction' && interaction) {
             const { chain1, chain2 } = interaction;
             
-            // Hide everything first to guarantee a clean slate.
-            viewer.setStyle({}, {cartoon:{hidden:true}, stick:{hidden:true}});
-            
-            // Show the full chains of interest as a faint cartoon for context.
-            viewer.setStyle({chain: [chain1, chain2]}, {cartoon: {color: 'lightgray', opacity: 0.3}});
+            // Set a faint cartoon style for the entire protein as a baseline context.
+            viewer.setStyle({}, { cartoon: { color: 'lightgray', opacity: 0.2 } });
 
-            // Define selections for interacting residues (within 5 angstroms)
-            const interSel1 = { chain: chain1, within: { distance: 5, sel: { chain: chain2 } } };
-            const interSel2 = { chain: chain2, within: { distance: 5, sel: { chain: chain1 } } };
+            // Define selections for the interacting residues (within 4.5 angstroms).
+            const interSel1 = { chain: chain1, within: { distance: 4.5, sel: { chain: chain2 } } };
+            const interSel2 = { chain: chain2, within: { distance: 4.5, sel: { chain: chain1 } } };
+
+            // Override the style for the interacting residues, making them prominent.
+            viewer.setStyle(interSel1, { stick: { colorscheme: 'cyanCarbon', radius: 0.15 } });
+            viewer.setStyle(interSel2, { stick: { colorscheme: 'magentaCarbon', radius: 0.15 } });
             
-            const chain1Color = '#67e8f9'; // A nice cyan
-            const chain2Color = '#f472b6'; // A nice pink
-            
-            // Apply distinct, opaque styles to interacting residues (stick + solid cartoon)
-            viewer.setStyle(interSel1, { stick: { color: chain1Color, radius: 0.15 }, cartoon: { color: chain1Color, opacity: 1.0 } });
-            viewer.setStyle(interSel2, { stick: { color: chain2Color, radius: 0.15 }, cartoon: { color: chain2Color, opacity: 1.0 } });
-            
+            // Add labels with a background for better readability.
             const labelStyle = {
                 fontColor: 'white',
-                fontSize: 10,
-                backgroundColor: 'rgba(17, 24, 39, 0.7)', // gray-900 with opacity
+                fontSize: 12,
+                backgroundColor: 'rgba(31, 41, 55, 0.7)', // gray-800 with opacity
                 borderColor: 'transparent',
-                padding: '2px',
             };
-            // Add labels (RESN+RESI) only to alpha carbons to prevent clutter
-            viewer.addResLabels({and: [interSel1, {elem: 'CA'}]}, (atom: any) => `${atom.resn}${atom.resi}`, labelStyle);
-            viewer.addResLabels({and: [interSel2, {elem: 'CA'}]}, (atom: any) => `${atom.resn}${atom.resi}`, labelStyle);
+            viewer.addResLabels({ and: [interSel1, { elem: 'CA' }] }, (atom: any) => `${atom.resn}${atom.resi}`, labelStyle);
+            viewer.addResLabels({ and: [interSel2, { elem: 'CA' }] }, (atom: any) => `${atom.resn}${atom.resi}`, labelStyle);
             
-            // Add hydrogen bonds only between the interacting residues
-            viewer.addHBonds({ sel1: interSel1, sel2: interSel2 }, { color: 'white', dashed: true, lineWidth: 0.8 });
+            // Visualize hydrogen bonds between the interacting residues.
+            viewer.addHBonds({ sel1: interSel1, sel2: interSel2 }, { color: 'white', dashed: true });
             
-            // Zoom to the interaction site
+            // Center the view on the interaction site.
             viewer.zoomTo({ or: [interSel1, interSel2] });
 
           } else { // default 'cartoon' style
