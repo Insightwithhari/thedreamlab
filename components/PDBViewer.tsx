@@ -5,9 +5,11 @@ declare const $3Dmol: any;
 
 interface PDBViewerProps {
   pdbId: string;
+  style?: 'cartoon' | 'surface' | 'interaction';
+  interaction?: { chain1: string, chain2: string };
 }
 
-const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId }) => {
+const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId, style = 'cartoon', interaction }) => {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,8 +32,37 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId }) => {
         })
         .then((pdbData) => {
           viewer.addModel(pdbData, 'pdb');
-          viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
-          viewer.zoomTo();
+
+          if (style === 'surface') {
+            viewer.setStyle({}, { cartoon: { colorscheme: 'chain' } });
+            viewer.addSurface($3Dmol.SurfaceType.MS, {
+              opacity: 0.9,
+              colorscheme: 'electrostatic',
+            });
+            viewer.zoomTo();
+          } else if (style === 'interaction' && interaction) {
+            const { chain1, chain2 } = interaction;
+            
+            viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
+
+            const interSel1 = { chain: chain1, within: { distance: 4, sel: { chain: chain2 } } };
+            const interSel2 = { chain: chain2, within: { distance: 4, sel: { chain: chain1 } } };
+            
+            viewer.setStyle(interSel1, { stick: {} });
+            viewer.setStyle(interSel2, { stick: {} });
+            
+            viewer.addResLabels(interSel1, { fontColor: 'white', fontSize: 12 });
+            viewer.addResLabels(interSel2, { fontColor: 'white', fontSize: 12 });
+            
+            viewer.addHBonds({ sel1: { chain: chain1 }, sel2: { chain: chain2 } });
+            
+            viewer.zoomTo({ or: [interSel1, interSel2] });
+
+          } else { // default 'cartoon' style
+            viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
+            viewer.zoomTo();
+          }
+
           viewer.render();
           setIsLoading(false);
         })
@@ -48,7 +79,7 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId }) => {
         viewer.clear();
       }
     };
-  }, [pdbId]);
+  }, [pdbId, style, interaction]);
 
   return (
     <div className="mt-4 rounded-lg overflow-hidden border border-gray-700 bg-black min-h-[400px] w-full max-w-2xl relative">
