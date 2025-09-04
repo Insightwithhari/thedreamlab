@@ -46,8 +46,12 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId, style = 'cartoon', interac
             
             const model = viewer.getModel();
 
-            // Set the base style for the interacting chains to a faint cartoon for context
-            viewer.setStyle({chain: [chain1, chain2]}, { cartoon: { color: 'lightgray', opacity: 0.5 } });
+            // Clear all default styles
+            viewer.setStyle({}, {});
+
+            // Set faint background styles for protein and nucleic acids
+            viewer.setStyle({chain: [chain1, chain2], protein: true}, { cartoon: { color: 'lightgray', opacity: 0.4 } });
+            viewer.setStyle({chain: [chain1, chain2], nucleic: true}, { cartoon: { style: 'trace', color: 'lightgray', opacity: 0.4 } });
 
             const interSel1 = { chain: chain1, within: { distance: 4.5, sel: { chain: chain2 } } };
             const interSel2 = { chain: chain2, within: { distance: 4.5, sel: { chain: chain1 } } };
@@ -57,9 +61,16 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId, style = 'cartoon', interac
 
             if (interactingAtoms1.length > 0 || interactingAtoms2.length > 0) {
               // Highlight the interacting residues with opaque sticks
-              viewer.setStyle(interSel1, { stick: { colorscheme: 'cyanCarbon', radius: 0.15, opacity: 1 } });
-              viewer.setStyle(interSel2, { stick: { colorscheme: 'magentaCarbon', radius: 0.15, opacity: 1 } });
+              viewer.setStyle(interSel1, { stick: { colorscheme: 'cyanCarbon', radius: 0.15 } });
+              viewer.setStyle(interSel2, { stick: { colorscheme: 'magentaCarbon', radius: 0.15 } });
               
+              // Add a transparent surface to visualize van der Waals contacts
+              viewer.addSurface($3Dmol.SurfaceType.VDW, {
+                opacity: 0.45,
+                color: 'white',
+                sel: { or: [interSel1, interSel2] }
+              });
+
               const labelStyle = { fontColor: 'white', fontSize: 12, backgroundColor: 'rgba(31, 41, 55, 0.7)', borderColor: 'transparent' };
               viewer.addResLabels({ and: [interSel1, { elem: 'CA' }] }, (atom: any) => `${atom.resn}${atom.resi}`, labelStyle);
               viewer.addResLabels({ and: [interSel2, { elem: 'CA' }] }, (atom: any) => `${atom.resn}${atom.resi}`, labelStyle);
@@ -77,7 +88,7 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId, style = 'cartoon', interac
                   ...Array.from(residues1).sort(),
                   `--- Chain ${chain2} Interacting Residues ---`,
                   ...Array.from(residues2).sort(),
-              ].filter(line => !line.startsWith('---') || (line.startsWith('---') && (residues1.size > 0 || residues2.size > 0))); // filter out empty headers
+              ].filter(line => !line.startsWith('---') || (line.startsWith('---') && (residues1.size > 0 || residues2.size > 0)));
               setInteractionList(combinedList.length > 2 ? combinedList : ['No significant interactions found within 4.5Å. Displaying chains for context.']);
 
             } else {
