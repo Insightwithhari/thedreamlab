@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { Chat } from '@google/genai';
 import { Message, MessageAuthor } from '../types';
@@ -16,40 +15,35 @@ const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, ch
   useEffect(() => {
     const ucPdbId = pdbId.toUpperCase();
     const ucChain = chain.toUpperCase();
-    // Use the more robust /core/entry/ endpoint to get all data for the PDB ID
-    const url = `https://data.rcsb.org/rest/v1/core/entry/${ucPdbId}`;
+    // Use the simple and robust FASTA endpoint.
+    const url = `https://www.rcsb.org/fasta/entry/${ucPdbId}`;
     
     fetch(url)
       .then(res => {
         if (!res.ok) {
-           throw new Error(`HTTP error! status: ${res.status}`);
+           throw new Error(`HTTP error fetching FASTA! Status: ${res.status}`);
         }
-        return res.json();
+        return res.text();
       })
-      .then(data => {
-        const polymerEntities = data.polymer_entities;
-        if (!polymerEntities || !Array.isArray(polymerEntities)) {
-            throw new Error('No polymer entities found in API response.');
-        }
+      .then(fastaData => {
+        // FASTA data can contain multiple entries (for multiple chains). We need to find the specific one requested.
+        const entries = fastaData.split('>').filter(entry => entry.trim() !== '');
+        const chainEntry = entries.find(entry => {
+          const header = entry.substring(0, entry.indexOf('\n'));
+          // The header format is typically >pdbId:chainId|...
+          const idPart = header.split('|')[0];
+          return idPart.trim() === `${ucPdbId}:${ucChain}`;
+        });
 
-        // Find the polymer entity corresponding to the requested chain.
-        // auth_asym_ids contains the chain ID(s) for this specific polymer.
-        const targetEntity = polymerEntities.find(entity => 
-            entity.rcsb_polymer_entity_container_identifiers?.auth_asym_ids?.includes(ucChain)
-        );
-
-        if (targetEntity) {
-          // The sequence is located in the entity_poly object.
-          const sequence = targetEntity.entity_poly?.pdbx_seq_one_letter_code_can;
-          if (sequence) {
-              const fastaHeader = `> ${ucPdbId}:${ucChain}|Chain ${ucChain}`;
-              const formattedSequence = sequence.replace(/\s/g, '').match(/.{1,70}/g)?.join('\n');
-              setContent(`${fastaHeader}\n${formattedSequence}`);
-          } else {
-              throw new Error(`Sequence not found for chain '${ucChain}' in the entity data.`);
-          }
+        if (chainEntry) {
+          // Re-add the '>' which was removed by split() and format the final output.
+          const [header, ...sequenceLines] = chainEntry.trim().split('\n');
+          const fastaHeader = `>${header}`;
+          // Re-join sequence lines and format them to a standard 70 characters per line.
+          const formattedSequence = sequenceLines.join('').replace(/\s/g, '').match(/.{1,70}/g)?.join('\n');
+          setContent(`${fastaHeader}\n${formattedSequence}`);
         } else {
-          throw new Error(`Could not find entity for chain '${ucChain}' in PDB ID '${ucPdbId}'.`);
+          throw new Error(`Could not find FASTA entry for chain '${ucChain}' in PDB ID '${ucPdbId}'. The entry may not contain this chain.`);
         }
       })
       .catch(err => {
