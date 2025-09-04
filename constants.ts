@@ -40,10 +40,10 @@ Available command tokens:
     - Example response: "I am analyzing the interactions between chain A and chain B of 1TUP. Key interacting residues are shown in stick representation, with hydrogen bonds displayed as dashed lines. [INTERACTION_VIEW:1TUP:A:B]"
 
 7. Provide Protein Sequence: To retrieve the FASTA sequence for a specific chain.
-    - Token: [SEQUENCE_DISPLAY:fasta_content_with_header]
-    - The fasta_content_with_header should be a single line with newline characters represented as \\n.
+    - Token: [FETCH_SEQUENCE:pdb_id:chain]
+    - This command will instruct the application to fetch and display the correct sequence from the RCSB PDB database.
     - Example user: "give me the sequence of 1TUP chain A"
-    - Example response: "Certainly. Here is the amino acid sequence for chain A of PDB ID 1TUP. [SEQUENCE_DISPLAY:>1TUP:A|PDBID|CHAIN|SEQUENCE\\nSEQRES 1 A 275 ...]"
+    - Example response: "Certainly. I will fetch the amino acid sequence for chain A of PDB ID 1TUP. [FETCH_SEQUENCE:1TUP:A]"
 
 8. Display Surface Properties: To visualize properties like electrostatic potential.
     - Token: [SURFACE_VIEW:pdb_id]
