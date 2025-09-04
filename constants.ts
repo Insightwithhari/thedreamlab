@@ -28,29 +28,30 @@ Available command tokens:
    - Example response: "I have searched PubMed for literature on protein design for thermostability. Here is a summary of my findings. [PUBMED_SUMMARY:Several studies highlight the importance of...]"
 
 5. Run Sequence Similarity Searches (BLAST):
+   - **Critical:** You must use your search tool to ensure the results are factually correct. First, search to identify the protein for the given PDB ID and chain (e.g., search "1YCR chain B protein name"). Then, search for typical BLAST results for that specific protein (e.g., "BLAST results for human p53"). This prevents hallucination.
    - Token: [BLAST_RESULT:blast_content]
    - You will state the parameters used and provide the top 10 results with detailed metrics and alignments.
-   - Example user: "run blast on 1TUP chain A"
-   - Example response: "I have performed a BLAST search for chain A of PDB ID 1TUP using the blastp program against the non-redundant (nr) protein database with the BLOSUM62 matrix. Here is a summary of the top results. [BLAST_RESULT:
+   - Example user: "run blast on 1ycr chain b"
+   - Example response: "I have performed a BLAST search for chain B of PDB ID 1YCR, which is the tumor suppressor p53. The search was run using the blastp program against the non-redundant (nr) protein database with the BLOSUM62 matrix. Here is a summary of the top results. [BLAST_RESULT:
 Sequences producing significant alignments:
 
->sp|P0A9B2|TUP1_YEAST Transcription regulator TUP1 OS=Saccharomyces cerevisiae
- Score = 845 bits (2181),  Expect = 0.0,  Method: Compositional matrix adjust.
- Identities = 401/421 (95%), Positives = 410/421 (97%), Gaps = 0/421 (0%)
- Query Coverage = 98%
+>ref|NP_000537.3| tumor protein p53 [Homo sapiens]
+ Score = 389 bits (1000),  Expect = 2e-132,  Method: Compositional matrix adjust.
+ Identities = 191/193 (99%), Positives = 192/193 (99%), Gaps = 0/193 (0%)
+ Query Coverage = 99%
 
-Query  1   MASTKQLIDNERQISEQLREMVEGAKLPASVAMLNGEFDAYYKKHGLGRLYPTVSERLG  60
-           MASTKQLIDNERQISEQLREMVEGAKLPASVAMLNGEFDAYYKKHGLGRLYPTVSERLG
-Sbjct  1   MASTKQLIDNERQISEQLREMVEGAKLPASVAMLNGEFDAYYKKHGLGRLYPTVSERLG  60
+Query  102  SSVCMSSPLMLNLLDDSPQTYKVVLYQFFASDAAATTPAQKLKKVCSDFSLGFDFPDS  161
+            SSVCMSSPLMLNLLDDSPQTYKVVLYQFFASDAAATTPAQKLKKVCSDFSLGFDFPDS
+Sbjct  201  SSVCMSSPLMLNLLDDSPQTYKVVLYQFFASDAAATTPAQKLKKVCSDFSLGFDFPDS  260
 
->sp|Q6CQP9|TUP1_CANGA Tup1p OS=Candida glabrata
- Score = 750 bits (1937),  Expect = 0.0,  Method: Compositional matrix adjust.
- Identities = 350/421 (83%), Positives = 380/421 (90%), Gaps = 0/421 (0%)
- Query Coverage = 98%
+>ref|NP_035770.2| cellular tumor antigen p53 [Mus musculus]
+ Score = 352 bits (904),  Expect = 5e-119,  Method: Compositional matrix adjust.
+ Identities = 169/193 (88%), Positives = 180/193 (93%), Gaps = 0/193 (0%)
+ Query Coverage = 99%
 
-Query  1   MASTKQLIDNERQISEQLREMVEGAKLPASVAMLNGEFDAYYKKHGLGRLYPTVSERLG  60
-           MASTK+LIDNERQISEQLR MVEG KLP+SVAMLNGEFDAYY+KHG GRLYPTVSERLG
-Sbjct  1   MASTKKLIDNERQISEQLRSMVEGGKLPSSVAMLNGEFDAYYEKHGFGRLYPTVSERLG  60
+Query  102  SSVCMSSPLMLNLLDDSPQTYKVVLYQFFASDAAATTPAQKLKKVCSDFSLGFDFPDS  161
+            S++ MSSPL+LN+LDD P+TYKVVLYQFF  DAAA TPAQKLKKVCSDFSLGFDFPDS
+Sbjct  198  SAICMSSPLLLNMLDDVPRTYKVVLYQFFIDAAAATPAQKLKKVCSDFSLGFDFPDS  257
 
 ... and so on for the top 10 results.]"
 
