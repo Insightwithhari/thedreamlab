@@ -8,31 +8,41 @@ import ChatInput from '../components/ChatInput';
 import { RhesusIcon, DownloadIcon } from '../components/icons';
 import PDBViewer from '../components/PDBViewer';
 
+// Moved component outside ChatbotPage to prevent re-declaration on every render.
 const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, chain }) => {
   const [content, setContent] = useState<string>('Fetching sequence...');
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    // Fetches sequence data directly from the authoritative RCSB PDB API.
-    // Crucially, converts chain to uppercase as the API requires it.
-    const url = `https://www.rcsb.org/fasta/entry/${pdbId.toUpperCase()}/chain/${chain.toUpperCase()}`;
+    // Switched to the more reliable, official RCSB Data API (JSON format).
+    const url = `https://data.rcsb.org/rest/v1/core/polymer_entity_instance/${pdbId.toUpperCase()}/${chain.toUpperCase()}`;
     
     fetch(url)
-      .then(async (res) => {
-        const text = await res.text();
-        if (!res.ok || text.includes('Nothing found')) {
-          const errorMsg = `Error: Could not find PDB ID '${pdbId.toUpperCase()}' with chain '${chain.toUpperCase()}'. Please check the identifiers.`;
-          throw new Error(errorMsg);
+      .then(res => {
+        if (!res.ok) {
+           throw new Error(`HTTP error! status: ${res.status}`);
         }
-        setContent(text);
+        return res.json();
+      })
+      .then(data => {
+        const sequence = data?.rcsb_polymer_entity_instance_container?.polymer_entity?.pdbx_seq_one_letter_code_can;
+        if (sequence) {
+          const fastaHeader = `> ${pdbId.toUpperCase()}:${chain.toUpperCase()}|Chain ${chain.toUpperCase()}`;
+          // Format sequence into lines of 70 characters for readability
+          const formattedSequence = sequence.replace(/\s/g, '').match(/.{1,70}/g)?.join('\n');
+          setContent(`${fastaHeader}\n${formattedSequence}`);
+        } else {
+          throw new Error(`Could not parse sequence from API response.`);
+        }
       })
       .catch(err => {
-        setContent(err.message || 'An unknown error occurred while fetching the sequence.');
+        console.error("Sequence fetch error:", err);
+        setContent(`Error: Failed to fetch sequence for PDB ID '${pdbId.toUpperCase()}' chain '${chain.toUpperCase()}'. Please verify the identifiers.`);
         setHasError(true);
       });
   }, [pdbId, chain]);
 
-  const preClasses = `whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4 ${hasError ? 'text-red-300' : ''}`;
+  const preClasses = `whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4 ${hasError ? 'text-red-300' : 'text-green-300'}`;
 
   return (
     <pre className={preClasses}>
