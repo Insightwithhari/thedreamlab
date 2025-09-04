@@ -14,8 +14,8 @@ const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, ch
 
   useEffect(() => {
     const ucPdbId = pdbId.toUpperCase();
-    const ucChain = chain.toUpperCase();
-    // Use the simple and robust FASTA endpoint.
+    // Chain ID is case-sensitive, so we use it directly as provided.
+    const trimmedChain = chain.trim(); 
     const url = `https://www.rcsb.org/fasta/entry/${ucPdbId}`;
     
     fetch(url)
@@ -26,29 +26,26 @@ const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, ch
         return res.text();
       })
       .then(fastaData => {
-        // FASTA data can contain multiple entries (for multiple chains). We need to find the specific one requested.
         const entries = fastaData.split('>').filter(entry => entry.trim() !== '');
         const chainEntry = entries.find(entry => {
           const header = entry.substring(0, entry.indexOf('\n'));
-          // The header format is typically >pdbId:chainId|...
           const idPart = header.split('|')[0];
-          return idPart.trim() === `${ucPdbId}:${ucChain}`;
+          // Match PDB ID (uppercase) and the exact chain ID (case-sensitive).
+          return idPart.trim() === `${ucPdbId}:${trimmedChain}`;
         });
 
         if (chainEntry) {
-          // Re-add the '>' which was removed by split() and format the final output.
           const [header, ...sequenceLines] = chainEntry.trim().split('\n');
           const fastaHeader = `>${header}`;
-          // Re-join sequence lines and format them to a standard 70 characters per line.
           const formattedSequence = sequenceLines.join('').replace(/\s/g, '').match(/.{1,70}/g)?.join('\n');
           setContent(`${fastaHeader}\n${formattedSequence}`);
         } else {
-          throw new Error(`Could not find FASTA entry for chain '${ucChain}' in PDB ID '${ucPdbId}'. The entry may not contain this chain.`);
+          throw new Error(`Could not find FASTA entry for chain '${trimmedChain}' in PDB ID '${ucPdbId}'. The entry may not contain this chain or the chain ID case might be incorrect.`);
         }
       })
       .catch(err => {
         console.error("Sequence fetch error:", err);
-        setContent(`Error: Failed to fetch sequence for PDB ID '${ucPdbId}' chain '${ucChain}'. Please verify the identifiers.`);
+        setContent(`Error: Failed to fetch sequence for PDB ID '${ucPdbId}' chain '${trimmedChain}'. Please verify the identifiers.`);
         setHasError(true);
       });
   }, [pdbId, chain]);
