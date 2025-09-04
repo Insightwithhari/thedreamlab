@@ -41,13 +41,13 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId, style = 'cartoon', interac
               colorscheme: 'electrostatic',
             });
           } else if (style === 'interaction' && interaction) {
-            // Ensure chain IDs are uppercase as they are case-sensitive. This makes the component more robust.
             const chain1 = interaction.chain1.toUpperCase();
             const chain2 = interaction.chain2.toUpperCase();
             
             const model = viewer.getModel();
 
-            viewer.setStyle({}, { cartoon: { color: 'lightgray', opacity: 0.2 } });
+            // Set the base style for the interacting chains to a faint cartoon for context
+            viewer.setStyle({chain: [chain1, chain2]}, { cartoon: { color: 'lightgray', opacity: 0.5 } });
 
             const interSel1 = { chain: chain1, within: { distance: 4.5, sel: { chain: chain2 } } };
             const interSel2 = { chain: chain2, within: { distance: 4.5, sel: { chain: chain1 } } };
@@ -55,9 +55,10 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId, style = 'cartoon', interac
             const interactingAtoms1 = model.selectedAtoms(interSel1);
             const interactingAtoms2 = model.selectedAtoms(interSel2);
 
-            if (interactingAtoms1.length > 0 && interactingAtoms2.length > 0) {
-              viewer.setStyle(interSel1, { stick: { colorscheme: 'cyanCarbon', radius: 0.15 } });
-              viewer.setStyle(interSel2, { stick: { colorscheme: 'magentaCarbon', radius: 0.15 } });
+            if (interactingAtoms1.length > 0 || interactingAtoms2.length > 0) {
+              // Highlight the interacting residues with opaque sticks
+              viewer.setStyle(interSel1, { stick: { colorscheme: 'cyanCarbon', radius: 0.15, opacity: 1 } });
+              viewer.setStyle(interSel2, { stick: { colorscheme: 'magentaCarbon', radius: 0.15, opacity: 1 } });
               
               const labelStyle = { fontColor: 'white', fontSize: 12, backgroundColor: 'rgba(31, 41, 55, 0.7)', borderColor: 'transparent' };
               viewer.addResLabels({ and: [interSel1, { elem: 'CA' }] }, (atom: any) => `${atom.resn}${atom.resi}`, labelStyle);
@@ -65,26 +66,24 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId, style = 'cartoon', interac
               
               viewer.zoomTo({ or: [interSel1, interSel2] });
 
-              // Extract and set interaction list
               const residues1 = new Set<string>();
-              interactingAtoms1.forEach((atom: any) => residues1.add(`${atom.resn} ${atom.resi} (Chain ${atom.chain})`));
+              interactingAtoms1.forEach((atom: any) => residues1.add(`${atom.resn} ${atom.resi}`));
               
               const residues2 = new Set<string>();
-              interactingAtoms2.forEach((atom: any) => residues2.add(`${atom.resn} ${atom.resi} (Chain ${atom.chain})`));
+              interactingAtoms2.forEach((atom: any) => residues2.add(`${atom.resn} ${atom.resi}`));
 
               const combinedList = [
                   `--- Chain ${chain1} Interacting Residues ---`,
                   ...Array.from(residues1).sort(),
                   `--- Chain ${chain2} Interacting Residues ---`,
                   ...Array.from(residues2).sort(),
-              ]
-              setInteractionList(combinedList);
+              ].filter(line => !line.startsWith('---') || (line.startsWith('---') && (residues1.size > 0 || residues2.size > 0))); // filter out empty headers
+              setInteractionList(combinedList.length > 2 ? combinedList : ['No significant interactions found within 4.5Å. Displaying chains for context.']);
 
             } else {
-              // If no interactions found, just show the chains for context
               setInteractionList(['No significant interactions found within 4.5Å. Displaying chains for context.']);
-              viewer.setStyle({chain: chain1}, {cartoon: {color: 'cyan'}});
-              viewer.setStyle({chain: chain2}, {cartoon: {color: 'magenta'}});
+              viewer.setStyle({chain: chain1}, {cartoon: {color: 'cyan', opacity: 1}});
+              viewer.setStyle({chain: chain2}, {cartoon: {color: 'magenta', opacity: 1}});
               viewer.zoomTo({or: [{chain: chain1}, {chain: chain2}]});
             }
 
