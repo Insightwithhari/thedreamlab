@@ -1,32 +1,38 @@
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import ProteinBackground from './components/ProteinBackground';
+import HomePage from './pages/HomePage';
 import ChatbotPage from './pages/ChatbotPage';
 import SupervisorPage from './pages/SupervisorPage';
 import AboutUsPage from './pages/AboutUsPage';
+import ContactUsPage from './pages/ContactUsPage';
 import { MenuIcon } from './components/icons';
 
-type Page = 'chatbot' | 'supervisor' | 'about';
+type Page = 'home' | 'chatbot' | 'supervisor' | 'about' | 'contact';
 
 const App: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState<Page>('chatbot');
+  const [currentPage, setCurrentPage] = useState<Page>('home');
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'home':
+        return <HomePage />;
       case 'chatbot':
         return <ChatbotPage />;
       case 'supervisor':
         return <SupervisorPage />;
       case 'about':
         return <AboutUsPage />;
+      case 'contact':
+        return <ContactUsPage />;
       default:
-        return <ChatbotPage />;
+        return <HomePage />;
     }
   };
 
   return (
-    <div className="relative min-h-screen bg-gray-900 text-white font-sans overflow-hidden">
+    <div className="relative min-h-screen bg-gray-900 text-white font-sans flex flex-col">
       <ProteinBackground />
       <Sidebar 
         isOpen={isSidebarOpen} 
@@ -34,7 +40,7 @@ const App: React.FC = () => {
         setCurrentPage={setCurrentPage}
       />
       
-      <div className="relative z-10 flex flex-col h-screen">
+      <div className="relative z-10 flex flex-col flex-grow">
         <header className="flex items-center p-4 bg-gray-900/70 backdrop-blur-sm border-b border-gray-700/50 shadow-lg">
           <button 
             onClick={() => setSidebarOpen(true)} 
@@ -53,6 +59,10 @@ const App: React.FC = () => {
         <main className="flex-1 overflow-y-auto bg-gray-900/50 backdrop-blur-sm">
           {renderPage()}
         </main>
+
+        <footer className="p-4 bg-gray-900/70 backdrop-blur-sm border-t border-gray-700/50 text-center text-xs text-gray-500">
+            © {new Date().getFullYear()} The Dream Lab. All rights reserved.
+        </footer>
       </div>
     </div>
   );
