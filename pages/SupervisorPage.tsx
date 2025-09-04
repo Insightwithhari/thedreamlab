@@ -17,14 +17,8 @@ const SupervisorPage: React.FC = () => {
             <InfoCard title="Ongoing Projects">
                 <p>Tracking 3 active research projects. Next milestone for Project Chimera is due next Friday.</p>
             </InfoCard>
-            <InfoCard title="Team Performance">
-                <p>Team productivity is up by 12% this quarter. Commendations to Jian for the latest publication.</p>
-            </InfoCard>
             <InfoCard title="Recent Publications">
                 <p>A new paper on "In-Silico Protein Folding" has been accepted by the Journal of Molecular Biology.</p>
-            </InfoCard>
-            <InfoCard title="Resource Allocation">
-                <p>Compute cluster usage is at 85% capacity. Planning upgrades for the next fiscal year.</p>
             </InfoCard>
         </div>
       </div>
