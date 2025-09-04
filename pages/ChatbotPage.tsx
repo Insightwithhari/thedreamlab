@@ -1,6 +1,4 @@
-
-
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import type { Chat } from '@google/genai';
 import { Message, MessageAuthor } from '../types';
 import { createChatSession, sendMessage } from '../services/geminiService';
@@ -8,6 +6,7 @@ import ChatWindow from '../components/ChatWindow';
 import ChatInput from '../components/ChatInput';
 import { RhesusIcon, DownloadIcon } from '../components/icons';
 import PDBViewer from '../components/PDBViewer';
+import PlasmidInfoCard from '../components/PlasmidInfoCard';
 
 const ChatbotPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -40,7 +39,7 @@ const ChatbotPage: React.FC = () => {
   const parseResponse = (responseText: string): React.ReactNode => {
     const parts: (string | React.ReactElement)[] = [];
     let lastIndex = 0;
-    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY|INTERACTION_VIEW|SURFACE_VIEW):([^\]]+)\]/g;
+    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY|PLASMID_INFO):([^\]]+)\]/g;
     
     let match;
     while ((match = regex.exec(responseText)) !== null) {
@@ -52,19 +51,9 @@ const ChatbotPage: React.FC = () => {
       
       switch (command) {
         case 'PDB_VIEW':
-          parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={payload.trim()} style="cartoon" />);
+          parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={payload.trim()} />);
           break;
-        case 'INTERACTION_VIEW': {
-            const [pdbId, chain1, chain2] = payload.trim().split(':');
-            if (pdbId && chain1 && chain2) {
-              parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={pdbId} style="interaction" interaction={{ chain1, chain2 }} />);
-            }
-            break;
-          }
-        case 'SURFACE_VIEW':
-            parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={payload.trim()} style="surface" />);
-            break;
-        case 'MUTATION_DOWNLOAD': {
+        case 'MUTATION_DOWNLOAD':
             const filename = payload.trim();
             const pdbId = filename.split('_')[0];
             parts.push(
@@ -79,18 +68,21 @@ const ChatbotPage: React.FC = () => {
               </div>
             );
           break;
-        }
         case 'BLAST_RESULT':
-          parts.push(
-            <div key={`${command}-${payload}`} className="mt-4 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-                <h4 className="text-sm font-bold text-gray-300 p-3 bg-gray-700/50">BLAST Search Results</h4>
-                <pre className="whitespace-pre p-3 font-mono text-xs max-h-96 overflow-auto">{payload.trim()}</pre>
-            </div>
-          );
+          parts.push(<pre key={`${command}-${payload}`} className="whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4">{payload.trim()}</pre>);
           break;
         case 'PUBMED_SUMMARY':
           parts.push(<div key={`${command}-${payload}`} className="mt-4 p-3 border-l-4 border-cyan-500 bg-gray-800 rounded-r-md">{payload.trim()}</div>);
           break;
+        case 'PLASMID_INFO':
+            try {
+                const info = JSON.parse(payload);
+                parts.push(<PlasmidInfoCard key={`${command}-${lastIndex}`} info={info} />);
+            } catch (e) {
+                console.error("Failed to parse PLASMID_INFO JSON:", e);
+                parts.push(<div className="text-red-400">Error parsing plasmid data.</div>);
+            }
+            break;
       }
       lastIndex = match.index + fullMatch.length;
     }
