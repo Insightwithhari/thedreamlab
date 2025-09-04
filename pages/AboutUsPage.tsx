@@ -26,7 +26,7 @@ const AboutUsPage: React.FC = () => {
         </div>
         
         <div>
-          <h2 className="text-3xl font-semibold text-center mb-8 border-b-2 border-cyan-500 pb-2">Team Members</h2>
+          <h2 className="text-3xl font-semibold text-center mb-8 border-b-2 border-cyan-500 pb-2">Developers</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <ProfileCard name="Jian Li" title="Ph.D. Candidate" imageUrl="https://i.pravatar.cc/150?img=3" />
             <ProfileCard name="Sofia Garcia" title="Bioinformatics Engineer" imageUrl="https://i.pravatar.cc/150?img=4" />
