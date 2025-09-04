@@ -43,19 +43,36 @@ const PDBViewer: React.FC<PDBViewerProps> = ({ pdbId, style = 'cartoon', interac
           } else if (style === 'interaction' && interaction) {
             const { chain1, chain2 } = interaction;
             
-            viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
+            // Set a default style for the whole protein (semi-transparent cartoon for context)
+            viewer.setStyle({}, { cartoon: { color: 'lightgray', opacity: 0.4 } });
 
-            const interSel1 = { chain: chain1, within: { distance: 4, sel: { chain: chain2 } } };
-            const interSel2 = { chain: chain2, within: { distance: 4, sel: { chain: chain1 } } };
+            // Define selections for interacting residues (within 5 angstroms)
+            const interSel1 = { chain: chain1, within: { distance: 5, sel: { chain: chain2 } } };
+            const interSel2 = { chain: chain2, within: { distance: 5, sel: { chain: chain1 } } };
             
-            viewer.setStyle(interSel1, { stick: {} });
-            viewer.setStyle(interSel2, { stick: {} });
+            // Define distinct colors for each chain
+            const chain1Color = '#67e8f9'; // A nice cyan
+            const chain2Color = '#f472b6'; // A nice pink
             
-            viewer.addResLabels(interSel1, { fontColor: 'white', fontSize: 12 });
-            viewer.addResLabels(interSel2, { fontColor: 'white', fontSize: 12 });
+            // Apply distinct styles to interacting residues (stick + solid cartoon)
+            viewer.setStyle(interSel1, { stick: { color: chain1Color }, cartoon: { color: chain1Color } });
+            viewer.setStyle(interSel2, { stick: { color: chain2Color }, cartoon: { color: chain2Color } });
             
-            viewer.addHBonds({ sel1: { chain: chain1 }, sel2: { chain: chain2 } });
+            // Add labels only to alpha carbons to prevent clutter, with a background for readability
+            const labelStyle = {
+                fontColor: 'white',
+                fontSize: 10,
+                backgroundColor: 'rgba(17, 24, 39, 0.7)', // gray-900 with opacity
+                borderColor: 'transparent',
+                padding: '2px',
+            };
+            viewer.addResLabels({and: [interSel1, {elem: 'CA'}]}, labelStyle);
+            viewer.addResLabels({and: [interSel2, {elem: 'CA'}]}, labelStyle);
             
+            // Add hydrogen bonds as white dashed lines
+            viewer.addHBonds({ sel1: { chain: chain1 }, sel2: { chain: chain2 } }, { color: 'white', dashed: true, lineWidth: 0.8 });
+            
+            // Zoom to the interaction site
             viewer.zoomTo({ or: [interSel1, interSel2] });
 
           } else { // default 'cartoon' style
