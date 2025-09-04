@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { Chat } from '@google/genai';
 import { Message, MessageAuthor } from '../types';
@@ -7,42 +8,65 @@ import ChatInput from '../components/ChatInput';
 import { RhesusIcon, DownloadIcon } from '../components/icons';
 import PDBViewer from '../components/PDBViewer';
 
-// BUG FIX: Corrected the JSON path to the sequence.
+// Moved component outside ChatbotPage to prevent re-declaration on every render.
 const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, chain }) => {
   const [content, setContent] = useState<string>('Fetching sequence...');
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    const url = `https://data.rcsb.org/rest/v1/core/polymer_entity_instance/${pdbId.toUpperCase()}/${chain.toUpperCase()}`;
+    const ucPdbId = pdbId.toUpperCase();
+    const ucChain = chain.toUpperCase();
+    // Use the more robust /core/entry/ endpoint to get all data for the PDB ID
+    const url = `https://data.rcsb.org/rest/v1/core/entry/${ucPdbId}`;
     
     fetch(url)
       .then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        if (!res.ok) {
+           throw new Error(`HTTP error! status: ${res.status}`);
+        }
         return res.json();
       })
       .then(data => {
-        // CORRECTED PATH:
-        const sequence = data?.polymer_entity?.pdbx_seq_one_letter_code_can;
-        if (sequence) {
-          const fastaHeader = `> ${pdbId.toUpperCase()}:${chain.toUpperCase()}|Chain ${chain.toUpperCase()}`;
-          const formattedSequence = sequence.replace(/\s/g, '').match(/.{1,70}/g)?.join('\n');
-          setContent(`${fastaHeader}\n${formattedSequence}`);
+        const polymerEntities = data.polymer_entities;
+        if (!polymerEntities || !Array.isArray(polymerEntities)) {
+            throw new Error('No polymer entities found in API response.');
+        }
+
+        // Find the polymer entity corresponding to the requested chain.
+        // auth_asym_ids contains the chain ID(s) for this specific polymer.
+        const targetEntity = polymerEntities.find(entity => 
+            entity.rcsb_polymer_entity_container_identifiers?.auth_asym_ids?.includes(ucChain)
+        );
+
+        if (targetEntity) {
+          // The sequence is located in the entity_poly object.
+          const sequence = targetEntity.entity_poly?.pdbx_seq_one_letter_code_can;
+          if (sequence) {
+              const fastaHeader = `> ${ucPdbId}:${ucChain}|Chain ${ucChain}`;
+              const formattedSequence = sequence.replace(/\s/g, '').match(/.{1,70}/g)?.join('\n');
+              setContent(`${fastaHeader}\n${formattedSequence}`);
+          } else {
+              throw new Error(`Sequence not found for chain '${ucChain}' in the entity data.`);
+          }
         } else {
-          throw new Error(`Could not parse sequence from API response.`);
+          throw new Error(`Could not find entity for chain '${ucChain}' in PDB ID '${ucPdbId}'.`);
         }
       })
       .catch(err => {
         console.error("Sequence fetch error:", err);
-        setContent(`Error: Failed to fetch sequence for PDB ID '${pdbId.toUpperCase()}' chain '${chain.toUpperCase()}'. Please verify the identifiers.`);
+        setContent(`Error: Failed to fetch sequence for PDB ID '${ucPdbId}' chain '${ucChain}'. Please verify the identifiers.`);
         setHasError(true);
       });
   }, [pdbId, chain]);
 
   const preClasses = `whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4 ${hasError ? 'text-red-300' : 'text-green-300'}`;
 
-  return <pre className={preClasses}>{content}</pre>;
+  return (
+    <pre className={preClasses}>
+      {content}
+    </pre>
+  );
 };
-
 
 const ChatbotPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -56,7 +80,6 @@ const ChatbotPage: React.FC = () => {
   const chatRef = useRef<Chat | null>(null);
 
   const handleDownload = (filename: string, pdbId: string) => {
-    // This function remains the same
     fetch(`https://files.rcsb.org/view/${pdbId}.pdb`)
       .then(response => response.text())
       .then(data => {
@@ -76,8 +99,7 @@ const ChatbotPage: React.FC = () => {
   const parseResponse = (responseText: string): React.ReactNode => {
     const parts: (string | React.ReactElement)[] = [];
     let lastIndex = 0;
-    // UPDATED REGEX to include new commands
-    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY|INTERACTION_VIEW|FETCH_SEQUENCE|SURFACE_VIEW|QUERY_RESIDUE|POCKET_VIEW|PREDICT_STABILITY):([^\]]+)\]/g;
+    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY|INTERACTION_VIEW|FETCH_SEQUENCE|SURFACE_VIEW):([^\]]+)\]/g;
     
     let match;
     while ((match = regex.exec(responseText)) !== null) {
@@ -98,23 +120,13 @@ const ChatbotPage: React.FC = () => {
             }
             break;
           }
-        case 'QUERY_RESIDUE': {
-            const [pdbId, chain, resi] = payload.trim().split(':');
-            if (pdbId && chain && resi) {
-                parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={pdbId} style="query_residue" query={{ chain, resi }} />);
-            }
-            break;
-        }
-        case 'POCKET_VIEW':
-            parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={payload.trim()} style="pocket" />);
-            break;
         case 'SURFACE_VIEW':
             parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={payload.trim()} style="surface" />);
             break;
         case 'FETCH_SEQUENCE': {
             const [pdbId, chain] = payload.trim().split(':');
             if (pdbId && chain) {
-                parts.push(<SequenceFetcher key={`${command}-${payload}`} pdbId={pdbId} chain={chain} />);
+                 parts.push(<SequenceFetcher key={`${command}-${payload}`} pdbId={pdbId} chain={chain} />);
             }
             break;
         }
@@ -132,11 +144,8 @@ const ChatbotPage: React.FC = () => {
                 </button>
               </div>
             );
-            break;
+          break;
         }
-        case 'PREDICT_STABILITY':
-            parts.push(<div key={`${command}-${payload}`} className="mt-4 p-3 border-l-4 border-yellow-500 bg-gray-800 rounded-r-md text-sm text-yellow-200">Stability prediction for <strong>{payload.trim()}</strong> is a planned feature that requires a backend server.</div>);
-            break;
         case 'BLAST_RESULT':
           parts.push(<pre key={`${command}-${payload}`} className="whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4">{payload.trim()}</pre>);
           break;
@@ -153,9 +162,8 @@ const ChatbotPage: React.FC = () => {
     
     return <>{parts.map((part, i) => <React.Fragment key={i}>{part}</React.Fragment>)}</>;
   };
-  
+
   const handleSendMessage = useCallback(async (messageText: string) => {
-    // This function remains the same
     if (isLoading) return;
 
     setIsLoading(true);
