@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { Chat } from '@google/genai';
 import { Message, MessageAuthor } from '../types';
@@ -14,7 +15,6 @@ const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, ch
 
   useEffect(() => {
     const ucPdbId = pdbId.toUpperCase();
-    // Chain ID is case-sensitive, so we use it directly as provided.
     const trimmedChain = chain.trim(); 
     const url = `https://www.rcsb.org/fasta/entry/${ucPdbId}`;
     
@@ -28,19 +28,40 @@ const SequenceFetcher: React.FC<{ pdbId: string; chain: string }> = ({ pdbId, ch
       .then(fastaData => {
         const entries = fastaData.split('>').filter(entry => entry.trim() !== '');
         const chainEntry = entries.find(entry => {
-          const header = entry.substring(0, entry.indexOf('\n'));
-          const idPart = header.split('|')[0];
-          // Match PDB ID (uppercase) and the exact chain ID (case-sensitive).
-          return idPart.trim() === `${ucPdbId}:${trimmedChain}`;
+          const header = entry.substring(0, entry.indexOf('\n')).trim();
+          const parts = header.split('|');
+          const idPart = parts[0]; // e.g., 1YCR:A
+          
+          if (!idPart.startsWith(ucPdbId + ':')) {
+            return false;
+          }
+      
+          // Look for the part that describes the chains, e.g., "Chains A, C"
+          const chainsDescriptionPart = parts.find(p => p.trim().toLowerCase().startsWith('chain'));
+      
+          if (chainsDescriptionPart) {
+            let chainListStr = chainsDescriptionPart.trim().toLowerCase();
+            // Remove "chains " or "chain " prefix
+            chainListStr = chainListStr.startsWith('chains') 
+              ? chainListStr.substring('chains'.length) 
+              : chainListStr.substring('chain'.length);
+            
+            const listedChains = chainListStr.trim().split(',').map(c => c.trim().toUpperCase());
+            return listedChains.includes(trimmedChain.toUpperCase());
+          }
+      
+          // Fallback: if no "Chains" part, check the ID part like "1YCR:A" case-insensitively
+          const primaryChainId = idPart.split(':')[1];
+          return primaryChainId.toUpperCase() === trimmedChain.toUpperCase();
         });
 
         if (chainEntry) {
           const [header, ...sequenceLines] = chainEntry.trim().split('\n');
           const fastaHeader = `>${header}`;
           const formattedSequence = sequenceLines.join('').replace(/\s/g, '').match(/.{1,70}/g)?.join('\n');
-          setContent(`${fastaHeader}\n${formattedSequence}`);
+          setContent(`${fastaHeader}\n${formattedSequence || ''}`);
         } else {
-          throw new Error(`Could not find FASTA entry for chain '${trimmedChain}' in PDB ID '${ucPdbId}'. The entry may not contain this chain or the chain ID case might be incorrect.`);
+          throw new Error(`Could not find FASTA entry for chain '${trimmedChain}' in PDB ID '${ucPdbId}'. The entry may not contain this chain or the chain ID is incorrect.`);
         }
       })
       .catch(err => {
