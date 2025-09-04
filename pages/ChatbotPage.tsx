@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback } from 'react';
 import type { Chat } from '@google/genai';
 import { Message, MessageAuthor } from '../types';
@@ -38,7 +39,7 @@ const ChatbotPage: React.FC = () => {
   const parseResponse = (responseText: string): React.ReactNode => {
     const parts: (string | React.ReactElement)[] = [];
     let lastIndex = 0;
-    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY):([^\]]+)\]/g;
+    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY|INTERACTION_VIEW|SEQUENCE_DISPLAY|SURFACE_VIEW):([^\]]+)\]/g;
     
     let match;
     while ((match = regex.exec(responseText)) !== null) {
@@ -50,9 +51,24 @@ const ChatbotPage: React.FC = () => {
       
       switch (command) {
         case 'PDB_VIEW':
-          parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={payload.trim()} />);
+          parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={payload.trim()} style="cartoon" />);
           break;
-        case 'MUTATION_DOWNLOAD':
+        case 'INTERACTION_VIEW': {
+            const [pdbId, chain1, chain2] = payload.trim().split(':');
+            if (pdbId && chain1 && chain2) {
+              parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={pdbId} style="interaction" interaction={{ chain1, chain2 }} />);
+            }
+            break;
+          }
+        case 'SURFACE_VIEW':
+            parts.push(<PDBViewer key={`${command}-${payload}`} pdbId={payload.trim()} style="surface" />);
+            break;
+        case 'SEQUENCE_DISPLAY': {
+            const sequenceContent = payload.trim().replace(/\\n/g, '\n');
+            parts.push(<pre key={`${command}-${payload}`} className="whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4">{sequenceContent}</pre>);
+            break;
+          }
+        case 'MUTATION_DOWNLOAD': {
             const filename = payload.trim();
             const pdbId = filename.split('_')[0];
             parts.push(
@@ -67,6 +83,7 @@ const ChatbotPage: React.FC = () => {
               </div>
             );
           break;
+        }
         case 'BLAST_RESULT':
           parts.push(<pre key={`${command}-${payload}`} className="whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4">{payload.trim()}</pre>);
           break;
