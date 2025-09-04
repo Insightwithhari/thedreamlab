@@ -80,7 +80,12 @@ const ChatbotPage: React.FC = () => {
           break;
         }
         case 'BLAST_RESULT':
-          parts.push(<pre key={`${command}-${payload}`} className="whitespace-pre-wrap bg-gray-800 p-3 rounded-md font-mono text-xs mt-4">{payload.trim()}</pre>);
+          parts.push(
+            <div key={`${command}-${payload}`} className="mt-4 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+                <h4 className="text-sm font-bold text-gray-300 p-3 bg-gray-700/50">BLAST Search Results</h4>
+                <pre className="whitespace-pre-wrap p-3 font-mono text-xs max-h-60 overflow-y-auto">{payload.trim()}</pre>
+            </div>
+          );
           break;
         case 'PUBMED_SUMMARY':
           parts.push(<div key={`${command}-${payload}`} className="mt-4 p-3 border-l-4 border-cyan-500 bg-gray-800 rounded-r-md">{payload.trim()}</div>);
