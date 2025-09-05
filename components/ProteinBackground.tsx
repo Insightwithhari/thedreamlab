@@ -4,9 +4,11 @@ declare const $3Dmol: any;
 
 const ProteinBackground: React.FC = () => {
   const viewerRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef(true); // Ref to track component mount status
   const pdbId = '1XQ8'; // Alpha-synuclein
 
   useEffect(() => {
+    isMountedRef.current = true;
     let viewer: any = null;
     let rotationInterval: number | undefined;
 
@@ -18,6 +20,8 @@ const ProteinBackground: React.FC = () => {
       fetch(`https://files.rcsb.org/view/${pdbId}.pdb`)
         .then((res) => res.text())
         .then((pdbData) => {
+          if (!isMountedRef.current) return; // Prevent updates if unmounted
+
           viewer.addModel(pdbData, 'pdb');
           viewer.setStyle({}, { cartoon: { color: 'spectrum' } });
           viewer.zoomTo();
@@ -40,6 +44,7 @@ const ProteinBackground: React.FC = () => {
 
     return () => {
       // Cleanup: clear interval and viewer on component unmount
+      isMountedRef.current = false; // Set to false on unmount
       if (rotationInterval) {
         clearInterval(rotationInterval);
       }
