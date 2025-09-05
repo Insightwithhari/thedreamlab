@@ -1,29 +1,39 @@
-import { GoogleGenAI, Chat } from "@google/genai";
-import { DR_RHESUS_SYSTEM_INSTRUCTION } from '../constants';
+import { Message, MessageAuthor } from '../types';
 
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable not set");
-}
+export async function sendMessage(history: Message[], newMessage: string): Promise<string> {
+  // Map the rich frontend message format to a simpler format for the backend.
+  const historyForBackend = history.map(msg => ({
+    author: msg.author,
+    content: msg.rawContent || (typeof msg.content === 'string' ? msg.content : ''),
+    id: msg.id,
+  }));
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-export function createChatSession(): Chat {
-  const chat = ai.chats.create({
-    model: 'gemini-2.5-flash',
-    config: {
-      systemInstruction: DR_RHESUS_SYSTEM_INSTRUCTION,
-      tools: [{ googleSearch: {} }],
-    },
+  // Add the new user message to the history being sent.
+  historyForBackend.push({
+      author: MessageAuthor.USER,
+      content: newMessage,
+      id: 'new-message',
   });
-  return chat;
-}
 
-export async function sendMessage(chat: Chat, message: string): Promise<string> {
   try {
-    const response = await chat.sendMessage({ message });
-    return response.text;
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ messages: historyForBackend }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Backend Error:", errorData);
+      throw new Error(errorData.error || 'The request to the backend failed.');
+    }
+
+    const data = await response.json();
+    return data.text;
   } catch (error) {
-    console.error("Error sending message to Gemini:", error);
+    console.error("Error sending message to backend:", error);
     return "I'm sorry, I encountered an error while processing your request. Please check the console for more details.";
   }
 }
