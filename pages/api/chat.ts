@@ -54,6 +54,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ text: responseText });
 
   } catch (err: any) {
-    return res.status(500).json({ error: err.message || "Unknown error" });
+    // Log error (always visible in Vercel → Logs)
+    console.error("Dr. Rhesus backend error:", err);
+
+    // In development → return full error
+    if (process.env.NODE_ENV === "development") {
+      return res.status(500).json({ error: err.message, stack: err.stack });
+    }
+
+    // In production → hide details from user
+    return res.status(500).json({ error: "Something went wrong on the server. Please try again later." });
   }
 }
