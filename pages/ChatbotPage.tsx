@@ -1,22 +1,22 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import type { Chat } from '@google/genai';
 import { Message, MessageAuthor } from '../types';
-import { sendMessage } from '../services/geminiService';
+import { createChatSession, sendMessage } from '../services/geminiService';
 import ChatWindow from '../components/ChatWindow';
 import ChatInput from '../components/ChatInput';
 import { RhesusIcon, DownloadIcon } from '../components/icons';
 import PDBViewer from '../components/PDBViewer';
 
 const ChatbotPage: React.FC = () => {
-  const initialMessageText = "Greetings. I am Dr. Rhesus, your bioinformatics research assistant. How may I help you today? You can ask me to find, visualize, or mutate protein structures, or to search for relevant literature.";
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'initial',
       author: MessageAuthor.RHESUS,
-      content: initialMessageText,
-      rawContent: initialMessageText,
+      content: "Greetings. I am Dr. Rhesus, your bioinformatics research assistant. How may I help you today? You can ask me to find, visualize, or mutate protein structures, or to search for relevant literature."
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const chatRef = useRef<Chat | null>(null);
 
   const handleDownload = (filename: string, pdbId: string) => {
     fetch(`https://files.rcsb.org/view/${pdbId}.pdb`)
@@ -88,26 +88,27 @@ const ChatbotPage: React.FC = () => {
     if (isLoading) return;
 
     setIsLoading(true);
+
+    if (!chatRef.current) {
+      chatRef.current = createChatSession();
+    }
     
     const userMessage: Message = {
       id: Date.now().toString(),
       author: MessageAuthor.USER,
-      content: messageText,
-      rawContent: messageText,
+      content: messageText
     };
 
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    setMessages(prev => [...prev, userMessage]);
 
     try {
-      const responseText = await sendMessage(messages, messageText);
+      const responseText = await sendMessage(chatRef.current, messageText);
       const parsedContent = parseResponse(responseText);
 
       const rhesusMessage: Message = {
         id: (Date.now() + 1).toString(),
         author: MessageAuthor.RHESUS,
         content: parsedContent,
-        rawContent: responseText,
       };
 
       setMessages(prev => [...prev, rhesusMessage]);
@@ -116,14 +117,13 @@ const ChatbotPage: React.FC = () => {
         const errorMessage: Message = {
             id: (Date.now() + 1).toString(),
             author: MessageAuthor.RHESUS,
-            content: "I'm sorry, an error occurred. Please try again.",
-            rawContent: "I'm sorry, an error occurred. Please try again.",
+            content: "I'm sorry, an error occurred. Please try again."
         };
         setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, messages]);
+  }, [isLoading]);
 
   return (
     <div className="flex flex-col h-full">

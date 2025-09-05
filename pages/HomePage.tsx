@@ -27,7 +27,7 @@ const HomePage: React.FC = () => {
           Welcome to The Dream Lab
         </h1>
         <p className="mt-4 text-lg md:text-xl text-gray-300">
-          - "Where we explore the questions we want the answers for."
+          - where we explore the questions we want the answers for.
         </p>
         <p className="mt-8 max-w-2xl mx-auto text-gray-400">
           Our platform integrates cutting-edge AI with powerful bioinformatics tools. 

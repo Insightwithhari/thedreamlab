@@ -1,3 +1,4 @@
+
 import type React from 'react';
 
 export enum MessageAuthor {
@@ -10,5 +11,4 @@ export interface Message {
   id: string;
   author: MessageAuthor;
   content: React.ReactNode;
-  rawContent?: string;
 }

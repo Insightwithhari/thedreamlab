@@ -43,9 +43,3 @@ export const PhoneIcon: React.FC<{ className?: string }> = ({ className = "w-6 h
         <path fillRule="evenodd" d="M1.5 4.5a3 3 0 0 1 3-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 0 1-.694 1.955l-1.293.97c-.135.101-.164.297-.078.465A12.723 12.723 0 0 0 8.9 20.1a12.723 12.723 0 0 0 7.273-3.79c.168-.155.365-.126.465-.078l.97 1.293a1.875 1.875 0 0 1 1.955.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 0 1-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5Z" clipRule="evenodd" />
     </svg>
 );
-
-export const FlaskIcon: React.FC<{ className?: string }> = ({ className = "w-6 h-6" }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 1-6.23-.693L4.2 15.3M19.8 15.3l-1.47-1.47m1.47 1.47L18.33 18.3M4.2 15.3l1.47-1.47m-1.47 1.47L5.67 18.3" />
-    </svg>
-);
