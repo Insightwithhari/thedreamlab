@@ -1,11 +1,8 @@
 import os
-from flask import Flask, request, jsonify
-from google.generativeai import GoogleGenAI
+import json
+import google.generativeai as genai
 
-# Vercel will automatically run this file as a serverless function
-app = Flask(__name__)
-
-# This is the Dr. Rhesus system instruction, now living securely on the backend.
+# === Dr. Rhesus system instruction ===
 DR_RHESUS_SYSTEM_INSTRUCTION = """
 You are Dr. Rhesus, an expert bioinformatics research assistant specializing in protein design. Your primary role is to assist scientists by integrating data from various bioinformatics sources and performing computational tasks. You are precise, helpful, and conversational. You should get straight to the point and provide answers directly.
 
@@ -46,55 +43,66 @@ Interaction Rules:
 - Always be conversational and helpful.
 """
 
-@app.route('/api/chat', methods=['POST'])
-def chat_handler():
+# === Vercel entry point ===
+def handler(request):
     try:
-        # Securely get the API key from Vercel's environment variables
-        api_key = os.environ.get('API_KEY')
+        if request.method != "POST":
+            return {
+                "statusCode": 405,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"error": "Method not allowed"})
+            }
+
+        api_key = os.environ.get("API_KEY")
         if not api_key:
-            return jsonify({"error": "API_KEY environment variable not set."}), 500
+            return {
+                "statusCode": 500,
+                "body": json.dumps({"error": "API_KEY not set"})
+            }
 
-        # Initialize the Gemini client
-        ai = GoogleGenAI(api_key=api_key)
+        # Configure Gemini
+        genai.configure(api_key=api_key)
 
-        # Get the message history from the frontend request
-        request_data = request.get_json()
-        if not request_data or 'messages' not in request_data:
-            return jsonify({"error": "Invalid request body. 'messages' key is required."}), 400
+        # Parse incoming JSON
+        data = request.json()
+        if not data or "messages" not in data:
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": "Missing 'messages'"})
+            }
 
-        messages_from_frontend = request_data['messages']
-        
-        # The last message is the current user prompt
-        user_prompt = messages_from_frontend[-1]['content']
+        messages_from_frontend = data["messages"]
 
-        # Format the history for the Gemini API
-        # The API expects roles to be 'user' and 'model'
+        # Extract current user prompt (last message)
+        user_prompt = messages_from_frontend[-1]["content"]
+
+        # Build history in Gemini format
         history_for_gemini = []
-        for msg in messages_from_frontend[:-1]: # Exclude the last message (current prompt)
-            author = msg.get('author')
-            content = msg.get('content', '')
-            if author == 'user':
-                history_for_gemini.append({'role': 'user', 'parts': [{'text': content}]})
-            elif author == 'rhesus':
-                history_for_gemini.append({'role': 'model', 'parts': [{'text': content}]})
+        for msg in messages_from_frontend[:-1]:
+            author = msg.get("author")
+            content = msg.get("content", "")
+            if author == "user":
+                history_for_gemini.append({"role": "user", "parts": [{"text": content}]})
+            elif author == "rhesus":
+                history_for_gemini.append({"role": "model", "parts": [{"text": content}]})
 
-        # Start a chat session with the existing history
-        chat_session = ai.chats.create(
-            model='gemini-2.5-flash',
+        # Send to Gemini
+        response = genai.chat(
+            model="gemini-2.5-flash",
+            config={"system_instruction": DR_RHESUS_SYSTEM_INSTRUCTION},
             history=history_for_gemini,
-            config={'systemInstruction': DR_RHESUS_SYSTEM_INSTRUCTION}
+            messages=[{"role": "user", "parts": [{"text": user_prompt}]}],
         )
 
-        # Send the new message
-        response = chat_session.sendMessage(message=user_prompt)
-
-        # Return the generated text to the frontend
-        return jsonify({"text": response.text})
+        # Return result
+        return {
+            "statusCode": 200,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"text": response.last.text})
+        }
 
     except Exception as e:
-        # Log the error for debugging on the Vercel dashboard
-        print(f"An error occurred: {e}")
-        return jsonify({"error": "An internal server error occurred."}), 500
-
-# This is the entry point for Vercel
-# Vercel will know how to handle the 'app' object
+        return {
+            "statusCode": 500,
+            "body": json.dumps({"error": str(e)})
+        }
