@@ -1,23 +1,22 @@
-import React, { useState, useRef, useCallback } from 'react';
-import type { Chat } from '@google/genai';
+import React, { useState, useCallback } from 'react';
 import { Message, MessageAuthor } from '../types';
-import { createChatSession, sendMessage } from '../services/geminiService';
+import { sendMessage } from '../services/geminiService';
 import ChatWindow from '../components/ChatWindow';
 import ChatInput from '../components/ChatInput';
 import { RhesusIcon, DownloadIcon } from '../components/icons';
 import PDBViewer from '../components/PDBViewer';
-import PlasmidInfoCard from '../components/PlasmidInfoCard';
 
 const ChatbotPage: React.FC = () => {
+  const initialMessageText = "Greetings. I am Dr. Rhesus, your bioinformatics research assistant. How may I help you today? You can ask me to find, visualize, or mutate protein structures, or to search for relevant literature.";
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'initial',
       author: MessageAuthor.RHESUS,
-      content: "Greetings. I am Dr. Rhesus, your bioinformatics research assistant. How may I help you today? You can ask me to find, visualize, or mutate protein structures, or to search for relevant literature."
+      content: initialMessageText,
+      rawContent: initialMessageText,
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
-  const chatRef = useRef<Chat | null>(null);
 
   const handleDownload = (filename: string, pdbId: string) => {
     fetch(`https://files.rcsb.org/view/${pdbId}.pdb`)
@@ -39,7 +38,7 @@ const ChatbotPage: React.FC = () => {
   const parseResponse = (responseText: string): React.ReactNode => {
     const parts: (string | React.ReactElement)[] = [];
     let lastIndex = 0;
-    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY|PLASMID_INFO):([^\]]+)\]/g;
+    const regex = /\[(PDB_VIEW|MUTATION_DOWNLOAD|BLAST_RESULT|PUBMED_SUMMARY):([^\]]+)\]/g;
     
     let match;
     while ((match = regex.exec(responseText)) !== null) {
@@ -74,15 +73,6 @@ const ChatbotPage: React.FC = () => {
         case 'PUBMED_SUMMARY':
           parts.push(<div key={`${command}-${payload}`} className="mt-4 p-3 border-l-4 border-cyan-500 bg-gray-800 rounded-r-md">{payload.trim()}</div>);
           break;
-        case 'PLASMID_INFO':
-            try {
-                const info = JSON.parse(payload);
-                parts.push(<PlasmidInfoCard key={`${command}-${lastIndex}`} info={info} />);
-            } catch (e) {
-                console.error("Failed to parse PLASMID_INFO JSON:", e);
-                parts.push(<div className="text-red-400">Error parsing plasmid data.</div>);
-            }
-            break;
       }
       lastIndex = match.index + fullMatch.length;
     }
@@ -98,27 +88,26 @@ const ChatbotPage: React.FC = () => {
     if (isLoading) return;
 
     setIsLoading(true);
-
-    if (!chatRef.current) {
-      chatRef.current = createChatSession();
-    }
     
     const userMessage: Message = {
       id: Date.now().toString(),
       author: MessageAuthor.USER,
-      content: messageText
+      content: messageText,
+      rawContent: messageText,
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
 
     try {
-      const responseText = await sendMessage(chatRef.current, messageText);
+      const responseText = await sendMessage(messages, messageText);
       const parsedContent = parseResponse(responseText);
 
       const rhesusMessage: Message = {
         id: (Date.now() + 1).toString(),
         author: MessageAuthor.RHESUS,
         content: parsedContent,
+        rawContent: responseText,
       };
 
       setMessages(prev => [...prev, rhesusMessage]);
@@ -127,13 +116,14 @@ const ChatbotPage: React.FC = () => {
         const errorMessage: Message = {
             id: (Date.now() + 1).toString(),
             author: MessageAuthor.RHESUS,
-            content: "I'm sorry, an error occurred. Please try again."
+            content: "I'm sorry, an error occurred. Please try again.",
+            rawContent: "I'm sorry, an error occurred. Please try again.",
         };
         setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading]);
+  }, [isLoading, messages]);
 
   return (
     <div className="flex flex-col h-full">
